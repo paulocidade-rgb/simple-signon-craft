@@ -11,6 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as EditorRouteImport } from './routes/editor'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
+import { Route as MyGithubRouteImport } from './routes/my-github'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
@@ -22,6 +25,21 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditorRoute = EditorRouteImport.update({
+  id: '/editor',
+  path: '/editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyGithubRoute = MyGithubRouteImport.update({
+  id: '/my-github',
+  path: '/my-github',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -38,12 +56,18 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/editor': typeof EditorRoute
+  '/marketplace': typeof MarketplaceRoute
+  '/my-github': typeof MyGithubRoute
   '/reset-password': typeof ResetPasswordRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/editor': typeof EditorRoute
+  '/marketplace': typeof MarketplaceRoute
+  '/my-github': typeof MyGithubRoute
   '/reset-password': typeof ResetPasswordRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -51,20 +75,48 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/editor': typeof EditorRoute
+  '/marketplace': typeof MarketplaceRoute
+  '/my-github': typeof MyGithubRoute
   '/reset-password': typeof ResetPasswordRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/reset-password' | '/auth/callback'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/editor'
+    | '/marketplace'
+    | '/my-github'
+    | '/reset-password'
+    | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/reset-password' | '/auth/callback'
-  id: '__root__' | '/' | '/auth' | '/reset-password' | '/auth/callback'
+  to:
+    | '/'
+    | '/auth'
+    | '/editor'
+    | '/marketplace'
+    | '/my-github'
+    | '/reset-password'
+    | '/auth/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/editor'
+    | '/marketplace'
+    | '/my-github'
+    | '/reset-password'
+    | '/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
+  EditorRoute: typeof EditorRoute
+  MarketplaceRoute: typeof MarketplaceRoute
+  MyGithubRoute: typeof MyGithubRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
@@ -82,6 +134,27 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editor': {
+      id: '/editor'
+      path: '/editor'
+      fullPath: '/editor'
+      preLoaderRoute: typeof EditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-github': {
+      id: '/my-github'
+      path: '/my-github'
+      fullPath: '/my-github'
+      preLoaderRoute: typeof MyGithubRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -114,6 +187,9 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
+  EditorRoute: EditorRoute,
+  MarketplaceRoute: MarketplaceRoute,
+  MyGithubRoute: MyGithubRoute,
   ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
