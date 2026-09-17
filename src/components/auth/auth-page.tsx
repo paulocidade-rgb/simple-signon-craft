@@ -31,8 +31,12 @@ export function AuthPage() {
     const password = String(form.get("password") ?? "");
     const parsed = mode === "forgot" ? emailSchema.safeParse(email) : credentialsSchema.safeParse({ email, password });
     if (!parsed.success) {
-      const flattened = parsed.error.flatten();
-      setErrors({ email: flattened.formErrors[0] ?? flattened.fieldErrors?.email?.[0], password: flattened.fieldErrors?.password?.[0] });
+      const nextErrors: FieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        if (issue.path[0] === "password") nextErrors.password = issue.message;
+        else nextErrors.email = issue.message;
+      }
+      setErrors(nextErrors);
       return;
     }
     setBusy(true);
@@ -60,22 +64,28 @@ export function AuthPage() {
 interface AuthFormProps { mode: AuthMode; busy: boolean; message: string; errors: FieldErrors; onSubmit: (event: FormEvent<HTMLFormElement>) => void; onModeChange: (mode: AuthMode) => void; }
 
 function AuthForm({ mode, busy, message, errors, onSubmit, onModeChange }: AuthFormProps) {
+  const [googleError, setGoogleError] = useState("");
   const title = mode === "signup" ? "Crie sua conta" : mode === "forgot" ? "Recupere seu acesso" : "Acesse sua conta";
   const subtitle = mode === "forgot" ? "Digite seu e-mail para receber o link de recuperação." : "Entre com seu e-mail para continuar.";
   async function googleSignIn() {
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin, extraParams: { prompt: "select_account" } });
-    if (result.error) throw result.error;
+    setGoogleError("");
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin, extraParams: { prompt: "select_account" } });
+      if (result.error) setGoogleError("Não foi possível entrar com o Google.");
+    } catch {
+      setGoogleError("Não foi possível entrar com o Google.");
+    }
   }
   return <AuthShell><section className="auth-rise mt-8 rounded-2xl bg-card p-6 shadow-2xl ring-1 ring-border backdrop-blur-2xl">
     <h1 className="font-display text-[26px] font-semibold leading-tight">{title}</h1><p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{subtitle}</p>
     <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
-      <AuthInput id="email" name="email" label="E-mail" type="email" autoComplete="email" placeholder="voce@empresa.com" error={errors.email} disabled={busy} />
-      {mode !== "forgot" ? <AuthInput id="password" name="password" label="Senha" type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="Mínimo de 8 caracteres" error={errors.password} disabled={busy} /> : null}
+      <AuthInput id="email" name="email" label="E-mail" type="email" autoComplete="email" placeholder="voce@empresa.com" {...(errors.email ? { error: errors.email } : {})} disabled={busy} />
+      {mode !== "forgot" ? <AuthInput id="password" name="password" label="Senha" type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="Mínimo de 8 caracteres" {...(errors.password ? { error: errors.password } : {})} disabled={busy} /> : null}
       {mode === "signin" ? <div className="flex items-center justify-end"><button type="button" className="text-xs text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground" onClick={() => onModeChange("forgot")}>Esqueceu a senha?</button></div> : null}
       {message ? <p className="rounded-lg bg-secondary px-3 py-2.5 text-xs leading-relaxed text-muted-foreground" role="status">{message}</p> : null}
       <Button className="auth-sheen w-full" variant="auth" size="auth" disabled={busy}>{busy ? <LoaderCircle className="animate-spin" /> : null}{mode === "signup" ? "Criar conta" : mode === "forgot" ? "Enviar link" : "Entrar"}</Button>
     </form>
-    {mode !== "forgot" ? <><div className="my-5 flex items-center gap-3"><span className="h-px flex-1 bg-border"/><span className="font-mono text-[10px] uppercase text-muted-foreground">ou</span><span className="h-px flex-1 bg-border"/></div><Button type="button" className="w-full" variant="authOutline" size="auth" onClick={() => void googleSignIn()}><Chrome />Continuar com Google</Button></> : null}
+    {mode !== "forgot" ? <><div className="my-5 flex items-center gap-3"><span className="h-px flex-1 bg-border"/><span className="font-mono text-[10px] uppercase text-muted-foreground">ou</span><span className="h-px flex-1 bg-border"/></div><Button type="button" className="w-full" variant="authOutline" size="auth" onClick={() => void googleSignIn()}><Chrome />Continuar com Google</Button>{googleError ? <p className="mt-2 text-center text-xs text-destructive" role="alert">{googleError}</p> : null}</> : null}
   </section><div className="auth-rise mt-4 rounded-xl bg-card/70 p-4 ring-1 ring-border backdrop-blur-xl"><p className="text-[13px] text-muted-foreground">{mode === "signin" ? "Não tem conta? " : mode === "signup" ? "Já tem uma conta? " : "Lembrou sua senha? "}<button type="button" className="font-medium text-foreground underline decoration-accent/60 underline-offset-4" onClick={() => onModeChange(mode === "signin" ? "signup" : "signin")}>{mode === "signin" ? "Criar conta" : "Voltar para entrar"}</button></p></div></AuthShell>;
 }
 
