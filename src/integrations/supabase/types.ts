@@ -162,6 +162,7 @@ export type Database = {
           amount_cents: number
           created_at: string
           credits: number
+          environment: string
           id: string
           status: string
           stripe_session_id: string
@@ -172,6 +173,7 @@ export type Database = {
           amount_cents: number
           created_at?: string
           credits: number
+          environment?: string
           id?: string
           status?: string
           stripe_session_id: string
@@ -182,6 +184,7 @@ export type Database = {
           amount_cents?: number
           created_at?: string
           credits?: number
+          environment?: string
           id?: string
           status?: string
           stripe_session_id?: string
@@ -239,6 +242,16 @@ export type Database = {
     Functions: {
       consume_credits: {
         Args: { p_amount: number; p_description: string; p_user_id: string }
+        Returns: boolean
+      }
+      fulfill_credit_purchase: {
+        Args: {
+          p_amount_cents: number
+          p_credits: number
+          p_environment: string
+          p_stripe_session_id: string
+          p_user_id: string
+        }
         Returns: boolean
       }
       has_role: {
