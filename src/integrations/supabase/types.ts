@@ -269,6 +269,10 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      refund_credits: {
+        Args: { p_amount: number; p_description: string; p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "owner" | "user"
