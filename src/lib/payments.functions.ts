@@ -3,7 +3,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createStripeClient, getStripeErrorMessage, type StripeEnv } from "@/lib/stripe.server";
 
-const packages = { credits_100_brl: 100, credits_300_brl: 300, credits_1000_brl: 1000 } as const;
+const packages = {
+  credits_100_brl: { credits: 100, amount: 4900 },
+  credits_300_brl: { credits: 300, amount: 12900 },
+  credits_1000_brl: { credits: 1000, amount: 34900 },
+} as const;
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -16,6 +20,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const stripe = createStripeClient(data.environment as StripeEnv);
       const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
       const price = prices.data[0]; if (!price) throw new Error("Pacote não encontrado.");
+      const selectedPackage = packages[data.priceId];
+      if (price.currency !== "brl" || price.unit_amount !== selectedPackage.amount) {
+        throw new Error("O valor deste pacote está inconsistente. Tente novamente mais tarde.");
+      }
       const { data: { user } } = await context.supabase.auth.getUser();
       const found = await stripe.customers.search({ query: `metadata['userId']:'${context.userId}'`, limit: 1 });
       const customer = found.data[0] ?? await stripe.customers.create({
@@ -28,7 +36,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         line_items: [{ price: price.id, quantity: 1 }], mode: "payment", ui_mode: "embedded_page",
         return_url: data.returnUrl, customer: customer.id, automatic_tax: { enabled: true },
         payment_intent_data: { description: product.name },
-        metadata: { userId: context.userId, priceId: data.priceId, credits: String(packages[data.priceId]), managed_payments: "false" },
+        metadata: { userId: context.userId, priceId: data.priceId, credits: String(selectedPackage.credits), managed_payments: "false" },
       });
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) { return { error: getStripeErrorMessage(error) }; }

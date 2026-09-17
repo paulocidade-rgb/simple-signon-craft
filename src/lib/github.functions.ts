@@ -116,11 +116,21 @@ export const commitReadme = createServerFn({ method: "POST" })
     });
     if (error) throw error;
     if (!paid) return { ok: false as const, insufficient: true as const };
-    const { Octokit } = await import("octokit");
-    const result = await new Octokit({ auth: connection.token }).rest.repos.createOrUpdateFileContents({
-      owner, repo: name, path: "README.md", message: data.message,
-      content: Buffer.from(data.content, "utf8").toString("base64"),
-      ...(data.sha ? { sha: data.sha } : {}),
-    });
-    return { ok: true as const, sha: result.data.content?.sha ?? null, url: result.data.commit.html_url ?? null };
+    try {
+      const { Octokit } = await import("octokit");
+      const result = await new Octokit({ auth: connection.token }).rest.repos.createOrUpdateFileContents({
+        owner, repo: name, path: "README.md", message: data.message,
+        content: Buffer.from(data.content, "utf8").toString("base64"),
+        ...(data.sha ? { sha: data.sha } : {}),
+      });
+      return { ok: true as const, sha: result.data.content?.sha ?? null, url: result.data.commit.html_url ?? null };
+    } catch (commitError) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.rpc("refund_credits", {
+        p_user_id: context.userId,
+        p_amount: 5,
+        p_description: `Estorno de commit com falha no ${repo}`,
+      });
+      throw commitError;
+    }
   });
