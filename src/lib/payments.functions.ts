@@ -18,7 +18,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const price = prices.data[0]; if (!price) throw new Error("Pacote não encontrado.");
       const { data: { user } } = await context.supabase.auth.getUser();
       const found = await stripe.customers.search({ query: `metadata['userId']:'${context.userId}'`, limit: 1 });
-      const customer = found.data[0] ?? await stripe.customers.create({ email: user?.email, metadata: { userId: context.userId } });
+      const customer = found.data[0] ?? await stripe.customers.create({
+        ...(user?.email ? { email: user.email } : {}),
+        metadata: { userId: context.userId },
+      });
       const productId = typeof price.product === "string" ? price.product : price.product.id;
       const product = await stripe.products.retrieve(productId);
       const session = await stripe.checkout.sessions.create({
