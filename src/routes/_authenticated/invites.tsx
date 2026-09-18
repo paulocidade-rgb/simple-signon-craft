@@ -1,0 +1,31 @@
+import { useState, type FormEvent } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Ban, Check, Clipboard, MailPlus, Plus } from "lucide-react";
+import { AppShell } from "@/components/hub/app-shell";
+import { PageError, PageLoading } from "@/components/admin/page-state";
+import { PageHeading } from "@/components/admin/page-heading";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAdminData } from "@/hooks/use-admin-data";
+import { cancelAdminInvite, createAdminInvite } from "@/lib/admin.functions";
+import { departments, type Department } from "@/lib/admin-types";
+
+export const Route = createFileRoute("/_authenticated/invites")({ head: () => ({ meta: [{ title: "Convites — Núcleo" }, { name: "description", content: "Criação e acompanhamento de convites de acesso." }, { property: "og:title", content: "Convites — Núcleo" }, { property: "og:description", content: "Criação e acompanhamento de convites de acesso." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: InvitesPage });
+function InvitesPage() {
+  const { data, isLoading, error } = useAdminData(); const queryClient = useQueryClient(); const cancel = useServerFn(cancelAdminInvite); const [open, setOpen] = useState(false);
+  const cancelMutation = useMutation({ mutationFn: (id: string) => cancel({ data: { id } }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-overview"] }) });
+  const status = (invite: { usado: boolean; cancelado_em: string | null; expira_em: string }) => invite.usado ? "Utilizado" : invite.cancelado_em ? "Cancelado" : new Date(invite.expira_em) < new Date() ? "Expirado" : "Pendente";
+  return <AppShell><PageHeading eyebrow="Entrada" title="Convites" description="Autorize novas pessoas com departamento e validade definidos." action={<Button onClick={() => setOpen(true)}><Plus />Novo convite</Button>} />{isLoading ? <PageLoading /> : error ? <PageError message={error.message} /> : <div className="overflow-x-auto rounded-md border border-border"><table className="w-full min-w-3xl text-left text-sm"><thead className="bg-secondary text-muted-foreground"><tr><th className="p-4">E-mail</th><th className="p-4">Departamento</th><th className="p-4">Validade</th><th className="p-4">Status</th><th className="p-4 text-right">Ação</th></tr></thead><tbody className="divide-y divide-border bg-card">{data?.invites.map((invite) => { const current = status(invite); return <tr key={invite.id}><td className="p-4 font-medium">{invite.email}</td><td className="p-4">{invite.departamento}</td><td className="p-4 text-muted-foreground">{new Date(invite.expira_em).toLocaleDateString("pt-BR")}</td><td className="p-4"><span className="text-xs">{current}</span></td><td className="p-4 text-right">{current === "Pendente" && <Button variant="ghost" size="icon" aria-label={`Cancelar convite de ${invite.email}`} onClick={() => cancelMutation.mutate(invite.id)}><Ban /></Button>}</td></tr>; })}{data?.invites.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">Nenhum convite criado.</td></tr>}</tbody></table></div>}<InviteDialog open={open} onClose={() => setOpen(false)} /></AppShell>;
+}
+function InviteDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const queryClient = useQueryClient(); const create = useServerFn(createAdminInvite); const [department, setDepartment] = useState<Department>("VENDAS"); const [inviteUrl, setInviteUrl] = useState("");
+  const mutation = useMutation({ mutationFn: (email: string) => create({ data: { email, departamento: department } }), onSuccess: async (result) => { setInviteUrl(`${window.location.origin}/invite?token=${result.token}`); await queryClient.invalidateQueries({ queryKey: ["admin-overview"] }); } });
+  const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const email = String(new FormData(event.currentTarget).get("email") ?? ""); mutation.mutate(email); };
+  const close = () => { setInviteUrl(""); mutation.reset(); onClose(); };
+  return <Dialog open={open} onOpenChange={(value) => { if (!value) close(); }}><DialogContent><DialogHeader><DialogTitle>Novo convite</DialogTitle><DialogDescription>O convite será válido por sete dias.</DialogDescription></DialogHeader>{inviteUrl ? <div className="grid gap-4"><div className="grid size-11 place-items-center rounded-md bg-primary text-primary-foreground"><Check /></div><p className="text-sm text-muted-foreground">Convite criado. Copie o link e envie à pessoa.</p><div className="flex gap-2"><Input readOnly value={inviteUrl} aria-label="Link do convite" /><Button size="icon" aria-label="Copiar link" onClick={() => navigator.clipboard.writeText(inviteUrl)}><Clipboard /></Button></div></div> : <form id="invite-form" className="grid gap-4" onSubmit={submit}><div className="grid gap-2"><Label htmlFor="invite-email">E-mail</Label><Input id="invite-email" name="email" type="email" required placeholder="pessoa@empresa.com" /></div><div className="grid gap-2"><Label>Departamento</Label><Select value={department} onValueChange={(value) => setDepartment(value as Department)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{departments.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></div>{mutation.error && <p role="alert" className="text-sm text-destructive">{mutation.error.message}</p>}</form>}<DialogFooter>{inviteUrl ? <Button onClick={close}>Concluir</Button> : <><Button variant="ghost" onClick={close}>Cancelar</Button><Button type="submit" form="invite-form" disabled={mutation.isPending}><MailPlus />{mutation.isPending ? "Criando..." : "Criar convite"}</Button></>}</DialogFooter></DialogContent></Dialog>;
+}
