@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { acceptAdminInvite, getInviteDetails } from "@/lib/admin.functions";
 
-export const Route = createFileRoute("/invite")({ validateSearch: (search: Record<string, unknown>) => ({ token: typeof search.token === "string" ? search.token : "" }), head: () => ({ meta: [{ title: "Aceitar convite — Núcleo" }, { name: "description", content: "Conclua seu cadastro seguro no Núcleo." }, { property: "og:title", content: "Aceitar convite — Núcleo" }, { property: "og:description", content: "Conclua seu cadastro seguro no Núcleo." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: InvitePage });
+export const Route = createFileRoute("/invite")({ validateSearch: (search: Record<string, unknown>) => ({ token: typeof search["token"] === "string" ? search["token"] : "" }), head: () => ({ meta: [{ title: "Aceitar convite — Núcleo" }, { name: "description", content: "Conclua seu cadastro seguro no Núcleo." }, { property: "og:title", content: "Aceitar convite — Núcleo" }, { property: "og:description", content: "Conclua seu cadastro seguro no Núcleo." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: InvitePage });
 function InvitePage() {
   const { token } = Route.useSearch(); const navigate = useNavigate(); const details = useServerFn(getInviteDetails); const accept = useServerFn(acceptAdminInvite);
   const [invite, setInvite] = useState<{ email: string; departamento: string } | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [done, setDone] = useState(false);
