@@ -24,6 +24,21 @@ export const getAdminOverview = createServerFn({ method: "GET" })
     return { users: users ?? [], invites: invites ?? [] };
   });
 
+export const provisionPanelProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isOwner } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" });
+    if (!isOwner) return { ok: true };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    if (authError || !authUser.user.email) throw new Error("Não foi possível preparar o perfil administrativo.");
+    const metadataName = authUser.user.user_metadata["full_name"];
+    const name = typeof metadataName === "string" && metadataName.trim().length >= 2 ? metadataName.trim() : authUser.user.email.split("@")[0] ?? "Administrador";
+    const { error } = await supabaseAdmin.from("usuarios").upsert({ id: context.userId, nome: name, email: authUser.user.email.toLowerCase(), departamento: "ADMIN", ativo: true }, { onConflict: "id" });
+    if (error) throw new Error("Não foi possível preparar o perfil administrativo.");
+    return { ok: true };
+  });
+
 export const updateAdminUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ id: z.string().uuid(), nome: z.string().trim().min(2).max(150), departamento: departmentSchema, ativo: z.boolean() }).parse(input))
