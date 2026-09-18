@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      convites_usuario: {
+        Row: {
+          atualizado_em: string
+          cancelado_em: string | null
+          criado_em: string
+          criado_por: string
+          departamento: Database["public"]["Enums"]["departamento_enum"]
+          email: string
+          expira_em: string
+          id: string
+          token_hash: string
+          usado: boolean
+          usado_em: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          cancelado_em?: string | null
+          criado_em?: string
+          criado_por: string
+          departamento: Database["public"]["Enums"]["departamento_enum"]
+          email: string
+          expira_em: string
+          id?: string
+          token_hash: string
+          usado?: boolean
+          usado_em?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          cancelado_em?: string | null
+          criado_em?: string
+          criado_por?: string
+          departamento?: Database["public"]["Enums"]["departamento_enum"]
+          email?: string
+          expira_em?: string
+          id?: string
+          token_hash?: string
+          usado?: boolean
+          usado_em?: string | null
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -235,6 +277,36 @@ export type Database = {
         }
         Relationships: []
       }
+      usuarios: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          criado_em: string
+          departamento: Database["public"]["Enums"]["departamento_enum"]
+          email: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          departamento?: Database["public"]["Enums"]["departamento_enum"]
+          email: string
+          id: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          departamento?: Database["public"]["Enums"]["departamento_enum"]
+          email?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -276,6 +348,12 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "user"
+      departamento_enum:
+        | "ADMIN"
+        | "FINANCEIRO"
+        | "VENDAS"
+        | "ESTOQUE"
+        | "JURIDICO"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -404,6 +482,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "user"],
+      departamento_enum: [
+        "ADMIN",
+        "FINANCEIRO",
+        "VENDAS",
+        "ESTOQUE",
+        "JURIDICO",
+      ],
     },
   },
 } as const
