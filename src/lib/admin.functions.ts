@@ -75,3 +75,30 @@ export const cancelAdminInvite = createServerFn({ method: "POST" })
     if (error) throw new Error("Não foi possível cancelar o convite.");
     return { ok: true };
   });
+
+export const getInviteDetails = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ token: z.string().length(64) }).parse(input))
+  .handler(async ({ data }) => {
+    const tokenHash = createHash("sha256").update(data.token).digest("hex");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: invite } = await supabaseAdmin.from("convites_usuario").select("email,departamento,expira_em,usado,cancelado_em").eq("token_hash", tokenHash).maybeSingle();
+    if (!invite || invite.usado || invite.cancelado_em || new Date(invite.expira_em) <= new Date()) throw new Error("Este convite é inválido ou expirou.");
+    return { email: invite.email, departamento: invite.departamento };
+  });
+
+export const acceptAdminInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ token: z.string().length(64), nome: z.string().trim().min(2).max(150) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const tokenHash = createHash("sha256").update(data.token).digest("hex");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    if (authError || !authUser.user.email) throw new Error("Não foi possível validar sua identidade.");
+    const { data: invite } = await supabaseAdmin.from("convites_usuario").select("id,email,departamento,expira_em,usado,cancelado_em").eq("token_hash", tokenHash).maybeSingle();
+    if (!invite || invite.usado || invite.cancelado_em || new Date(invite.expira_em) <= new Date() || invite.email !== authUser.user.email.toLowerCase()) throw new Error("Este convite não pertence à conta autenticada ou expirou.");
+    const { error: profileError } = await supabaseAdmin.from("usuarios").upsert({ id: context.userId, nome: data.nome, email: invite.email, departamento: invite.departamento, ativo: true }, { onConflict: "id" });
+    if (profileError) throw new Error("Não foi possível concluir seu cadastro.");
+    const { error: inviteError } = await supabaseAdmin.from("convites_usuario").update({ usado: true, usado_em: new Date().toISOString() }).eq("id", invite.id).eq("usado", false);
+    if (inviteError) throw new Error("Não foi possível concluir seu convite.");
+    return { ok: true };
+  });
